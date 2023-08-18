@@ -98,24 +98,22 @@ class ResetPassword extends ComponentBase
         }
 
         $user = Auth::findUserByEmail(post('email'));
-        if (!$user || $user->is_guest || $user->trashed()) {
-            throw new ApplicationException(Lang::get(/*A user was not found with the given credentials.*/'rainlab.user::lang.account.invalid_user'));
+        if ($user || !$user->is_guest || !$user->trashed()) {
+            $code = implode('!', [$user->id, $user->getResetPasswordCode()]);
+    
+            $link = $this->makeResetUrl($code);
+    
+            $data = [
+                'name' => $user->name,
+                'username' => $user->username,
+                'link' => $link,
+                'code' => $code
+            ];
+    
+            Mail::send('rainlab.user::mail.restore', $data, function($message) use ($user) {
+                $message->to($user->email, $user->full_name);
+            });
         }
-
-        $code = implode('!', [$user->id, $user->getResetPasswordCode()]);
-
-        $link = $this->makeResetUrl($code);
-
-        $data = [
-            'name' => $user->name,
-            'username' => $user->username,
-            'link' => $link,
-            'code' => $code
-        ];
-
-        Mail::send('rainlab.user::mail.restore', $data, function($message) use ($user) {
-            $message->to($user->email, $user->full_name);
-        });
     }
 
     /**
